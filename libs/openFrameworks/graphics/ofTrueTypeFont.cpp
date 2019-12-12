@@ -370,8 +370,7 @@ static string linuxFontPathByName(const string& fontname){
 #endif
 
 //-----------------------------------------------------------
-static bool loadFontFace(const of::filesystem::path& _fontname, FT_Face & face, of::filesystem::path & filename, int index){
-	of::filesystem::path fontname = _fontname;
+static bool loadFontFace(const std::filesystem::path& _fontname, FT_Face & face, std::filesystem::path & filename){
 	filename = ofToDataPath(_fontname,true);
 	ofFile fontFile(filename,ofFile::Reference);
 	int fontID = index;
