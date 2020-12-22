@@ -430,7 +430,7 @@ protected:
 
 	std::vector<glyphProps> cps; // properties for each character
 
-    std::unordered_map<uint32_t,size_t> glyphIndexMap;
+	std::unordered_map<uint32_t,size_t> glyphIndexMap;
 
 	double getKerning(uint32_t leftC, uint32_t rightC) const;
 	void drawChar(uint32_t c, float x, float y, bool vFlipped) const;
