@@ -6,8 +6,9 @@
  */
 
 #include "ofAppAndroidWindow.h"
-
-#include <jni.h>
+extern "C" {
+    #include "ofxAndroidJNIExt.h"
+}
 #include <queue>
 #include "ofGraphics.h"
 #include "ofAppRunner.h"
@@ -246,19 +247,148 @@ int ofAppAndroidWindow::getGlesVersion()
 	return glesVersion;
 }
 
-extern "C"{
+extern "C" {
 
-jint JNI_OnLoad(JavaVM* vm, void* reserved)
-{
-	JNIEnv *env;
-	ofJavaVM = vm;
-	ofLogVerbose() << "JNI_OnLoad called";
-	if (vm->GetEnv((void**) &env, JNI_VERSION_1_4) != JNI_OK) {
-		ofLogError("ofAppAndroidWindow") << "failed to get environment using GetEnv()";
-		return -1;
+	jweak mesosClassLoader = NULL;
+	jclass FindMesosClass(JNIEnv* env, const char* className)
+	{
+		if (env->ExceptionCheck()) {
+			fprintf(stderr, "ERROR: exception pending on entry to "
+							"FindMesosClass()\n");
+			return NULL;
+		}
+
+		if (mesosClassLoader == NULL) {
+			return env->FindClass(className);
+		}
+
+		// JNI FindClass uses class names with slashes, but
+		// ClassLoader.loadClass uses the dotted "binary name"
+		// format. Convert formats.
+		string convName = className;
+		for (int i = 0; i < convName.size(); i++) {
+			if (convName[i] == '/')
+				convName[i] = '.';
+		}
+
+		jclass javaLangClassLoader = env->FindClass("java/lang/ClassLoader");
+		assert(javaLangClassLoader != NULL);
+		jmethodID loadClass =
+				env->GetMethodID(javaLangClassLoader,
+								"loadClass",
+								"(Ljava/lang/String;)Ljava/lang/Class;");
+		assert(loadClass != NULL);
+
+		// Create an object for the class name string; alloc could fail.
+		jstring strClassName = env->NewStringUTF(convName.c_str());
+		if (env->ExceptionCheck()) {
+			fprintf(stderr, "ERROR: unable to convert '%s' to string\n",
+					convName.c_str());
+			return NULL;
+		}
+
+		// Try to find the named class.
+		jclass cls = (jclass) env->CallObjectMethod(mesosClassLoader,
+													loadClass,
+													strClassName);
+
+		if (env->ExceptionCheck()) {
+			env->ExceptionDescribe();
+			fprintf(stderr, "ERROR: unable to load class '%s' from %p\n",
+					className, mesosClassLoader);
+			return NULL;
+		}
+
+		return cls;
 	}
-	return JNI_VERSION_1_4;
-}
+
+	jint initClassLoader(JavaVM* jvm) {
+		// Grab the context ClassLoader of the current thread, if any.
+		JNIEnv* env;
+		if (jvm->GetEnv((void**) &env, JNI_VERSION_1_4) != JNI_OK) {
+			return JNI_ERR; // JNI version not supported.
+		}
+
+		// Find thread's context class loader.
+		jclass javaLangThread = env->FindClass("java/lang/Thread");
+		assert(javaLangThread != NULL);
+
+		jclass javaLangClassLoader = env->FindClass("java/lang/ClassLoader");
+		assert(javaLangClassLoader != NULL);
+
+		jmethodID currentThread = env->GetStaticMethodID(
+				javaLangThread, "currentThread", "()Ljava/lang/Thread;");
+		assert(currentThread != NULL);
+
+		jmethodID getContextClassLoader = env->GetMethodID(
+				javaLangThread, "getContextClassLoader", "()Ljava/lang/ClassLoader;");
+		assert(getContextClassLoader != NULL);
+
+		jobject thread = env->CallStaticObjectMethod(javaLangThread, currentThread);
+		assert(thread != NULL);
+
+		jobject classLoader = env->CallObjectMethod(thread, getContextClassLoader);
+
+		if (classLoader != NULL) {
+			mesosClassLoader = env->NewWeakGlobalRef(classLoader);
+		}
+
+		// Check that we are loading the correct version of the native library.
+		jclass clazz = FindMesosClass(env, "cc/openframeworks/OFActivity");
+//		jobject jVERSION = env->GetStaticObjectField(
+//				clazz, env->GetStaticFieldID(clazz, "VERSION", "Ljava/lang/String;"));
+
+	//	const string& expected = construct<string>(env, jVERSION);
+
+	//	if (MESOS_VERSION != expected) {
+	//		env->DeleteWeakGlobalRef(mesosClassLoader);
+	//		mesosClassLoader = NULL;
+	//		const string& error =
+	//				"Java expecting version " + expected + ", found version " + MESOS_VERSION;
+	//		clazz = env->FindClass("java/lang/UnsatisfiedLinkError");
+	//		env->ThrowNew(clazz, error.c_str());
+	//		return JNI_ERR;
+	//	}
+
+		// Set the 'loaded' property so we don't try and load it again. This
+		// is necessary because a native library can be loaded either with
+		// 'System.load' or 'System.loadLibrary' and while redundant calls
+		// to 'System.loadLibrary' will be ignored one call of each could
+		// cause an error.
+//		clazz = FindMesosClass(env, "cc/openframeworks/OFActivity");
+//		jfieldID loaded = env->GetStaticFieldID(clazz, "loaded", "Z");
+//		env->SetStaticBooleanField(clazz, loaded, (jboolean) true);
+		return JNI_VERSION_1_4;
+	}
+
+	JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved)
+	{
+		JNIEnv *env;
+		ofJavaVM = vm;
+		ofLogVerbose() << "JNI_OnLoad called";
+		if (vm->GetEnv((void**) &env, JNI_VERSION_1_4) != JNI_OK) {
+			ofLogError("ofAppAndroidWindow") << "failed to get environment using GetEnv()";
+			return -1;
+		}
+		return initClassLoader(vm);
+	}
+
+	// Called by JVM when it unloads our library.
+	JNIEXPORT void JNICALL JNI_OnUnLoad(JavaVM* jvm, void* reserved)
+	{
+		JNIEnv* env;
+		if (jvm->GetEnv((void**) &env, JNI_VERSION_1_4) != JNI_OK) {
+			return;
+		}
+
+		// TODO(benh): Must we set 'MesosNativeLibrary.loaded' to false?
+
+		if (mesosClassLoader != NULL) {
+			env->DeleteWeakGlobalRef(mesosClassLoader);
+			mesosClassLoader = NULL;
+		}
+	}
+
 
 void
 Java_cc_openframeworks_OFAndroid_setAppDataDir( JNIEnv*  env, jobject  thiz, jstring data_dir)

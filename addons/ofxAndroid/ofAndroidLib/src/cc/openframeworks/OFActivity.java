@@ -12,7 +12,9 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
 
-public abstract class OFActivity extends Activity{
+import androidx.appcompat.app.AppCompatActivity;
+
+public abstract class OFActivity extends AppCompatActivity {
 	public void onGLSurfaceCreated(){}
 	public void onLoadPercent(float percent){}
 	public void onUnpackingResourcesDone(){}
