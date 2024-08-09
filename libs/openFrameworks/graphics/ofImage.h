@@ -5,6 +5,7 @@
 #include "ofGraphicsConstants.h"
 #include "ofGLUtils.h"
 #include "ofConstants.h"
+#include "ofPixels.h"
 
 template<typename T>
 class ofPixels_;

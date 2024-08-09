@@ -107,6 +107,10 @@ bool ofxXmlSettings::saveFile(const string & path){
 	return save(path);
 }
 
+bool ofxXmlSettings::saveFile(){
+    return doc.SaveFile();
+}
+
 //---------------------------------------------------------
 void ofxXmlSettings::clearTagContents(const string& tag, int which){
 	//we check it first to see if it exists

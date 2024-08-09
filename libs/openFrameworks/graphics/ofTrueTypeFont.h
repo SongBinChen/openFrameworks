@@ -392,10 +392,10 @@ public:
 		return int(p * 64.0 + 0.5);
 	}
 
+    ofTrueTypeFontSettings settings;
 protected:
 	/// \cond INTERNAL
-	
-
+	virtual bool setTexAtlas(int w, int h, ofPixels pixels);
 	
 	bool bLoadedOk;
 	
@@ -431,8 +431,7 @@ protected:
 
 	std::vector<glyphProps> cps; // properties for each character
 
-	ofTrueTypeFontSettings settings;
-	std::unordered_map<uint32_t,size_t> glyphIndexMap;
+    std::unordered_map<uint32_t,size_t> glyphIndexMap;
 
 	double getKerning(uint32_t leftC, uint32_t rightC) const;
 	void drawChar(uint32_t c, float x, float y, bool vFlipped) const;

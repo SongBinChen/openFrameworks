@@ -13,7 +13,7 @@ model {
         compileSdkVersion 25
 
         defaultConfig.with {
-            minSdkVersion.apiLevel 19
+            minSdkVersion.apiLevel 23
             targetSdkVersion.apiLevel 25
         }
 
