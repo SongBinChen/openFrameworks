@@ -20,11 +20,11 @@ public class OFAndroidLifeCycle
         Log.i("OF","static init");
         
         try {
-            Log.i("OF","loading x86 library");
-            System.loadLibrary("OFAndroidApp_x86");
+            Log.i("OF","loading library");
+            System.loadLibrary("OFAndroidApp");
         }
         catch(Throwable ex)	{
-            Log.i("OF","failed x86 loading, trying neon detection",ex);
+            Log.i("OF","failed loading, trying neon detection",ex);
             
             try{
                 System.loadLibrary("neondetection");
@@ -34,7 +34,7 @@ public class OFAndroidLifeCycle
                 }
                 else{
                     Log.i("OF","loading not-neon optimized library");
-                    System.loadLibrary("OFAndroidApp");
+                    System.loadLibrary("OFAndroidApp_x86");
                 }
             }catch(Throwable ex2){
                 Log.i("OF","failed neon detection, loading not-neon library",ex2);
