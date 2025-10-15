@@ -21,6 +21,13 @@ public class OFAndroidLifeCycle
         
         try {
             Log.i("OF","loading library");
+			System.loadLibrary("avutil");
+			System.loadLibrary("swresample");
+			System.loadLibrary("avcodec");
+			System.loadLibrary("avformat");
+			System.loadLibrary("swscale");
+			System.loadLibrary("avfilter");
+			System.loadLibrary("avdevice");
             System.loadLibrary("OFAndroidApp");
         }
         catch(Throwable ex)	{
